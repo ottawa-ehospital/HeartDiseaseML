@@ -78,7 +78,11 @@ def predict_by_phone(phone_number):
         }
     })
 
-CORS(app, origins=['http://localhost:3000'])
+CORS(app, origins=[
+    'http://localhost:3000',
+    'https://e-react-frontend-55dbf7a5897e.herokuapp.com'
+])
+
 
 if __name__ == '__main__':
     app.run(debug=True, use_reloader=False)
