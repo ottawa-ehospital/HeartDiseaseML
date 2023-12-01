@@ -57,12 +57,39 @@ def predict_by_phone(phone_number):
     # Convert the prediction to a descriptive message
     if prediction[0] == 0:
         result = "The patient will not develop heart disease."
+        prediction_value = 0
     else:
         result = "The patient will develop heart disease."
+        prediction_value = 1
+
+    try:
+        connection = mysql.connector.connect(**db_config)
+        cursor = connection.cursor()
+
+        # Add CHD column to heart_disease_test table if it doesn't exist
+        cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'heart_disease_test' AND COLUMN_NAME = 'CHD'")
+        if not cursor.fetchone():
+            # Add CHD column to heart_disease_test table if it doesn't exist
+            cursor.execute("ALTER TABLE heart_disease_test ADD COLUMN CHD INT")
+            connection.commit()
+
+        # Update the heart_disease_test table with the prediction result in the CHD column
+        update_query = f"UPDATE heart_disease_test SET CHD = {prediction_value} WHERE patient_id = {patient_id}"
+        cursor.execute(update_query)
+        update_count = cursor.rowcount  # Get the number of rows affected
+        connection.commit()
+
+        update_status = "Update successful" if update_count > 0 else "No rows updated"
+    except mysql.connector.Error as err:
+        return jsonify({'error': f'Database error: {err}'}), 500
+    finally:
+        cursor.close()
+        connection.close()
 
     return jsonify({
         'prediction': result,
         'features': {
+            'data': update_status,
             'id': patient_id,
             'male': male,
             'age': age,
@@ -77,6 +104,8 @@ def predict_by_phone(phone_number):
 
         }
     })
+
+    
 
 CORS(app, origins=[
     'http://localhost:3000',
